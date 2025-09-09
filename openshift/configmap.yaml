@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: housing-api-config
+  namespace: farisamz71-dev
+  labels:
+    app: housing-price-api
+data:
+  api-config.json: |
+    {
+      "model_version": "1.0.0",
+      "api_settings": {
+        "max_batch_size": 100,
+        "timeout_seconds": 30,
+        "log_level": "INFO"
+      },
+      "feature_names": [
+        "MedInc",
+        "HouseAge",
+        "AveRooms",
+        "AveBedrms",
+        "Population",
+        "AveOccup",
+        "Latitude",
+        "Longitude"
+      ],
+      "feature_descriptions": {
+        "MedInc": "Median income in block group",
+        "HouseAge": "Median house age in block group",
+        "AveRooms": "Average number of rooms per household",
+        "AveBedrms": "Average number of bedrooms per household",
+        "Population": "Block group population",
+        "AveOccup": "Average number of household members",
+        "Latitude": "Block group latitude",
+        "Longitude": "Block group longitude"
+      }
+    }

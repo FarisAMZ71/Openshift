@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: housing-api-dashboard
+  namespace: farisamz71-dev
+  labels:
+    app: housing-price-api
+    grafana_dashboard: "true"
+data:
+  housing-api-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Housing Price API Monitoring",
+        "panels": [
+          {
+            "title": "Request Rate",
+            "targets": [
+              {
+                "expr": "sum(rate(flask_http_request_total{job=\"housing-price-api\"}[5m])) by (method, status)"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "title": "Response Time",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(flask_http_request_duration_seconds_bucket{job=\"housing-price-api\"}[5m]))"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "title": "Pod CPU Usage",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"housing-price-api-.*\"}[5m])) by (pod)"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "title": "Pod Memory Usage",
+            "targets": [
+              {
+                "expr": "sum(container_memory_usage_bytes{pod=~\"housing-price-api-.*\"}) by (pod) / 1024 / 1024"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "title": "Prediction Count",
+            "targets": [
+              {
+                "expr": "sum(increase(predictions_total{job=\"housing-price-api\"}[1h]))"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "title": "Model Performance (MAE)",
+            "targets": [
+              {
+                "expr": "model_mae{job=\"housing-price-api\"}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ],
+        "refresh": "10s",
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        }
+      }
+    }
+    
+---
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: housing-price-api
+  namespace: farisamz71-dev
+  labels:
+    app: housing-price-api
+spec:
+  selector:
+    matchLabels:
+      app: housing-price-api
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics

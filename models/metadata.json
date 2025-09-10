@@ -10,8 +10,8 @@
     "Longitude"
   ],
   "model_version": "1.0.0",
-  "training_date": "2025-09-09T09:44:19.726440",
-  "test_mae": 0.45124199986457825,
+  "training_date": "2025-09-10T08:37:29.958432",
+  "test_mae": 0.45794814825057983,
   "framework": "tensorflow",
   "framework_version": "2.20.0"
 }

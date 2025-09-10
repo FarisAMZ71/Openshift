@@ -65,10 +65,15 @@ echo "=================================================="
 #     oc apply -f openshift/buildconfig.yaml
 #     oc start-build $APP_NAME --follow
 # fi
-
+# Prompt user for a build number to wait for, or use latest
+read -p "Enter build number to wait for (or press Enter to use latest): " BUILD_NUM
+if [ -z "$BUILD_NUM" ]; then
+    BUILD_NUM=$(oc get builds -o jsonpath="{.items[-1:].metadata.name}" | sed "s/.*-\([0-9]*\)$/\1/")
+fi
+BUILD_NAME="$APP_NAME-$BUILD_NUM"
 # Wait for build to complete
 echo -e "\n${YELLOW}Waiting for build to complete...${NC}"
-oc wait --for=condition=Complete build/$APP_NAME-3 --timeout=600s
+oc wait --for=condition=Complete build/$BUILD_NAME --timeout=600s
 echo -e "${GREEN}✅ Build completed successfully${NC}"
 
 # Step 6: Deploy the application

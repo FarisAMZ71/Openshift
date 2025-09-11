@@ -20,10 +20,9 @@ pipeline {
                     python -m venv venv
                     source venv/bin/activate
                     pip install -r requirements.txt
-                    pip install -r requirements-dev.txt
                     
                     # Run tests
-                    python -m pytest tests/ --junitxml=test-results.xml
+                    python -m pytest tests/ -v --junitxml=test-results.xml
                     
                     # Code quality checks
                     flake8 app.py

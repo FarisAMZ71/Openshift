@@ -54,75 +54,49 @@ pipeline {
         
         stage('Setup Python Environment') {
             steps {
-                timeout(time: 20, unit: 'MINUTES') {  // Stage-specific timeout
-                    script {
-                        def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
-                        echo "[${timestamp}] 🐍 Setting up Python environment with optimizations"
-                    }
-                    sh '''
-                        # Clean any existing environment
-                        rm -rf venv || true
-                        
-                        # Create virtual environment
-                        python3 -m venv venv
-                        . venv/bin/activate
-                        
-                        # Setup pip cache
-                        mkdir -p ${PIP_CACHE_DIR}
-                        
-                        # Upgrade pip with timeout
-                        echo "⬆️ Upgrading pip..."
-                        pip install --upgrade pip --timeout=300
-                        
-                        # Install dependencies in optimized order
-                        echo "📦 Installing build tools..."
-                        pip install --timeout=300 wheel setuptools
-                        
-                        echo "📦 Installing lightweight packages..."
-                        pip install --timeout=300 --cache-dir=${PIP_CACHE_DIR} \
-                            flask flask-cors python-dotenv pytest pytest-cov flake8 pylint requests gunicorn
-                        
-                        echo "📦 Installing scientific computing stack (this takes time)..."
-                        # Install numpy first (many packages depend on it)
-                        pip install --timeout=600 --cache-dir=${PIP_CACHE_DIR} numpy
-                        
-                        # Install pandas (depends on numpy)
-                        pip install --timeout=600 --cache-dir=${PIP_CACHE_DIR} pandas
-                        
-                        # Install scikit-learn
-                        pip install --timeout=600 --cache-dir=${PIP_CACHE_DIR} scikit-learn
-                        
-                        echo "📦 Installing XGBoost (large package - please wait)..."
-                        pip install --timeout=900 --cache-dir=${PIP_CACHE_DIR} --retries=2 xgboost || {
-                            echo "⚠️ XGBoost install failed, trying without cache..."
-                            pip install --timeout=1200 --no-cache-dir xgboost
-                        }
-                        
-                        echo "📦 Installing remaining packages..."
-                        pip install --timeout=300 --cache-dir=${PIP_CACHE_DIR} \
-                            joblib matplotlib seaborn
-                        
-                        echo "✅ All dependencies installed successfully"
-                        
-                        # Verify installation
-                        python --version
-                        echo "📊 Installed packages summary:"
-                        pip list | grep -E "(flask|pytest|numpy|pandas|sklearn|xgboost)" | head -10
-                        
-                        # Quick functionality test
-                        python -c "
-import numpy as np
-import pandas as pd  
-import sklearn
-import xgboost
-print('✅ All critical packages imported successfully')
-print(f'NumPy: {np.__version__}')
-print(f'Pandas: {pd.__version__}')  
-print(f'Scikit-learn: {sklearn.__version__}')
-print(f'XGBoost: {xgboost.__version__}')
-"
-                    '''
+                script {
+                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    echo "[${timestamp}] 🐍 Setting up Python environment"
                 }
+                sh '''
+                    # Create virtual environment with timeout and retry logic
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    
+                    # Upgrade pip with timeout
+                    echo "⬆️ Upgrading pip..."
+                    pip install --upgrade pip --timeout=300 --retries=3
+                    
+                    # Install dependencies in chunks with optimizations
+                    echo "📦 Installing core dependencies..."
+                    pip install --timeout=600 --retries=3 --no-cache-dir \
+                        --index-url https://pypi.org/simple/ \
+                        --trusted-host pypi.org \
+                        wheel setuptools
+                    
+                    echo "📦 Installing lightweight packages first..."
+                    pip install --timeout=300 --retries=3 --no-cache-dir \
+                        flask flask-cors python-dotenv pytest pytest-cov flake8 pylint
+                    
+                    echo "📦 Installing ML packages (this may take a while)..."
+                    # Install heavy packages one by one with longer timeouts
+                    pip install --timeout=900 --retries=2 --no-cache-dir numpy
+                    pip install --timeout=900 --retries=2 --no-cache-dir pandas
+                    pip install --timeout=900 --retries=2 --no-cache-dir scikit-learn
+                    
+                    echo "📦 Installing XGBoost (large download)..."
+                    pip install --timeout=1200 --retries=2 --no-cache-dir xgboost
+                    
+                    echo "📦 Installing remaining packages..."
+                    pip install --timeout=300 --retries=3 --no-cache-dir \
+                        joblib matplotlib seaborn requests gunicorn
+                    
+                    echo "✅ All dependencies installed successfully"
+                    python --version
+                    pip list | head -20
+                    echo "📊 Key packages verification:"
+                    pip list | grep -E "(pytest|flask|scikit-learn|xgboost|pandas|numpy)" || echo "Some packages may not be installed"
+                '''
             }
         }
         

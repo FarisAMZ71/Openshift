@@ -19,52 +19,52 @@ REGISTRY="image-registry.openshift-image-registry.svc:5000"
 echo -e "${GREEN}🚀 Starting Housing Price API Deployment to OpenShift${NC}"
 echo "=================================================="
 
-# # Step 1: Check if logged into OpenShift
-# echo -e "\n${YELLOW}Step 1: Checking OpenShift connection...${NC}"
-# if ! oc whoami &> /dev/null; then
-#     echo -e "${RED}❌ Not logged into OpenShift. Please run: oc login <cluster-url>${NC}"
-#     exit 1
-# fi
-# echo -e "${GREEN}✅ Connected to OpenShift as $(oc whoami)${NC}"
+# Step 1: Check if logged into OpenShift
+echo -e "\n${YELLOW}Step 1: Checking OpenShift connection...${NC}"
+if ! oc whoami &> /dev/null; then
+    echo -e "${RED}❌ Not logged into OpenShift. Please run: oc login <cluster-url>${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✅ Connected to OpenShift as $(oc whoami)${NC}"
 
-# # Step 2: Create namespace if it doesn't exist
-# echo -e "\n${YELLOW}Step 2: Setting up namespace...${NC}"
-# if oc get namespace $NAMESPACE &> /dev/null; then
-#     echo "Namespace $NAMESPACE already exists"
-# else
-#     oc new-project $NAMESPACE --description="ML Workshop - Housing Price Prediction" \
-#         --display-name="ML Workshop"
-#     echo -e "${GREEN}✅ Created namespace: $NAMESPACE${NC}"
-# fi
-# oc project $NAMESPACE
+# Step 2: Create namespace if it doesn't exist
+echo -e "\n${YELLOW}Step 2: Setting up namespace...${NC}"
+if oc get namespace $NAMESPACE &> /dev/null; then
+    echo "Namespace $NAMESPACE already exists"
+else
+    oc new-project $NAMESPACE --description="ML Workshop - Housing Price Prediction" \
+        --display-name="ML Workshop"
+    echo -e "${GREEN}✅ Created namespace: $NAMESPACE${NC}"
+fi
+oc project $NAMESPACE
 
 # # Step 3: Create PVC for model storage
 # echo -e "\n${YELLOW}Step 3: Creating persistent storage...${NC}"
 # oc apply -f openshift/pvc.yaml
 # echo -e "${GREEN}✅ PVC created/updated${NC}"
 
-# # Step 4: Create ConfigMap
-# echo -e "\n${YELLOW}Step 4: Creating ConfigMap...${NC}"
-# oc apply -f openshift/configmap.yaml
-# echo -e "${GREEN}✅ ConfigMap created/updated${NC}"
+# Step 4: Create ConfigMap
+echo -e "\n${YELLOW}Step 4: Creating ConfigMap...${NC}"
+oc apply -f openshift/configmap.yaml
+echo -e "${GREEN}✅ ConfigMap created/updated${NC}"
 
-# # Step 5: Build the container image
-# echo -e "\n${YELLOW}Step 5: Building container image...${NC}"
-# echo "This may take 5-10 minutes for the first build..."
+# Step 5: Build the container image
+echo -e "\n${YELLOW}Step 5: Building container image...${NC}"
+echo "This may take 5-10 minutes for the first build..."
 
-# # Option A: Build from local directory (if you have source code locally)
-# if [ -f "Dockerfile" ]; then
-#     echo "Building from local source..."
-#     # Create a binary build
-#     oc new-build --name=$APP_NAME --binary --strategy=docker || true
-#     # Start the build
-#     oc start-build $APP_NAME --from-dir=. --follow
-# else
-#     # Option B: Build from Git repository
-#     echo "Building from Git repository..."
-#     oc apply -f openshift/buildconfig.yaml
-#     oc start-build $APP_NAME --follow
-# fi
+# Option A: Build from local directory (if you have source code locally)
+if [ -f "Dockerfile" ]; then
+    echo "Building from local source..."
+    # Create a binary build
+    oc new-build --name=$APP_NAME --binary --strategy=docker || true
+    # Start the build
+    oc start-build $APP_NAME --from-dir=. --follow
+else
+    # Option B: Build from Git repository
+    echo "Building from Git repository..."
+    oc apply -f openshift/buildconfig.yaml
+    oc start-build $APP_NAME --follow
+fi
 # Prompt user for a build number to wait for, or use latest
 read -p "Enter build number to wait for (or press Enter to use latest): " BUILD_NUM
 if [ -z "$BUILD_NUM" ]; then

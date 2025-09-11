@@ -137,11 +137,11 @@ def run_tests(base_url):
     
     # Test 8: Performance test
     print_colored("\n📍 Test 8: Performance Test", YELLOW)
-    print("Making 10 rapid requests...")
+    print("Making 100 rapid requests...")
     start_time = time.time()
     success_count = 0
     
-    for i in range(10):
+    for i in range(100):
         try:
             response = requests.post(f"{base_url}/predict", json=sample_data, timeout=5)
             if response.status_code == 200:
@@ -150,13 +150,13 @@ def run_tests(base_url):
             pass
     
     elapsed_time = time.time() - start_time
-    avg_time = elapsed_time / 10
+    avg_time = elapsed_time / 100
     
-    print(f"Successful requests: {success_count}/10")
+    print(f"Successful requests: {success_count}/100")
     print(f"Total time: {elapsed_time:.2f} seconds")
     print(f"Average response time: {avg_time:.3f} seconds")
     
-    if success_count == 10 and avg_time < 2.0:
+    if success_count == 100 and avg_time < 2.0:
         print_colored("✅ Performance test passed", GREEN)
         test_results.append(("Performance", True))
     else:

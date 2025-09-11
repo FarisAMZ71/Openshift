@@ -33,13 +33,11 @@ spec:
         - name: PORT
           value: "8080"
         - name: MODEL_PATH
-          value: "/app/models/housing_model.keras"
+          value: "/app/models/housing_model.json"
         - name: SCALER_PATH
           value: "/app/models/scaler.pkl"
         - name: METADATA_PATH
           value: "/app/models/metadata.json"
-        - name: TF_CPP_MIN_LOG_LEVEL
-          value: "2"  # Reduce TensorFlow logging verbosity
         resources:
           requests:
             memory: "512Mi"

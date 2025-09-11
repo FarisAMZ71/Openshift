@@ -19,12 +19,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all necessary files for training
 COPY application/ ./application/
 
-
 # Create models directory and run training with validation
 RUN mkdir -p models && \
     python application/train.py && \
     ls -la models/ && \
-    test -f models/housing_model.keras && \
+    test -f models/housing_model.json && \
     test -f models/scaler.pkl && \
     test -f models/metadata.json && \
     echo "✅ All model artifacts created successfully"
@@ -49,7 +48,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy trained models from training stage with verification
 COPY --from=training-stage /app/models ./models
 RUN ls -la models/ && \
-    test -f models/housing_model.keras && \
+    test -f models/housing_model.json && \
     test -f models/scaler.pkl && \
     test -f models/metadata.json && \
     echo "✅ Model artifacts successfully copied"
@@ -59,7 +58,7 @@ COPY application/api.py .
 
 # Set environment variables
 ENV PORT=8080
-ENV MODEL_PATH=models/housing_model.keras
+ENV MODEL_PATH=models/housing_model.json
 ENV SCALER_PATH=models/scaler.pkl
 ENV METADATA_PATH=models/metadata.json
 
@@ -70,5 +69,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# Run the API
-CMD ["python", "api.py"]
+# Run the API with Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "--worker-class", "gevent", "--worker-connections", "1000", "--timeout", "30", "--keep-alive", "2", "--max-requests", "1000", "--max-requests-jitter", "50", "--access-logfile", "-", "--error-logfile", "-", "api:application"]

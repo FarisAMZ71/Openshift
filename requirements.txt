@@ -17,7 +17,7 @@ idna
 itsdangerous
 Jinja2
 joblib
-keras
+xgboost
 libclang
 Markdown
 markdown-it-py
@@ -32,6 +32,7 @@ packaging
 pillow
 protobuf
 Pygments
+pandas
 python-dateutil
 requests
 rich
@@ -39,9 +40,6 @@ scikit-learn
 scipy
 setuptools
 six
-tensorboard
-tensorboard-data-server
-tensorflow
 termcolor
 threadpoolctl
 typing_extensions

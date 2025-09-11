@@ -11,8 +11,7 @@ import numpy as np
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import tensorflow as tf
-from tensorflow import keras
+import xgboost as xgb
 
 # Configure logging
 logging.basicConfig(
@@ -35,10 +34,11 @@ def load_model_artifacts():
     global model, scaler, metadata
     
     try:
-        # Load the model
-        model_path = os.getenv('MODEL_PATH', 'models/housing_model.keras')
-        logger.info(f"Loading model from {model_path}")
-        model = keras.models.load_model(model_path)
+        # Load the XGBoost model
+        model_path = os.getenv('MODEL_PATH', 'models/housing_model.json')
+        logger.info(f"Loading XGBoost model from {model_path}")
+        model = xgb.Booster()
+        model.load_model(model_path)
         
         # Load the scaler
         scaler_path = os.getenv('SCALER_PATH', 'models/scaler.pkl')
@@ -128,9 +128,12 @@ def predict():
         # Scale the input
         input_scaled = scaler.transform(input_array)
         
+        # Create DMatrix for XGBoost prediction
+        dmatrix = xgb.DMatrix(input_scaled)
+        
         # Make prediction
-        prediction = model.predict(input_scaled, verbose=0)
-        predicted_price = float(prediction[0][0]) * 100000  # Convert to dollars
+        prediction = model.predict(dmatrix)
+        predicted_price = float(prediction[0]) * 100000  # Convert to dollars
         
         # Log the prediction
         logger.info(f"Prediction made: ${predicted_price:.2f}")
@@ -175,8 +178,9 @@ def batch_predict():
             # Prepare and predict
             input_array = np.array(features).reshape(1, -1)
             input_scaled = scaler.transform(input_array)
-            prediction = model.predict(input_scaled, verbose=0)
-            predicted_price = float(prediction[0][0]) * 100000
+            dmatrix = xgb.DMatrix(input_scaled)
+            prediction = model.predict(dmatrix)
+            predicted_price = float(prediction[0]) * 100000
             
             predictions.append({
                 'id': item.get('id', 'unknown'),
@@ -230,12 +234,14 @@ def index():
         }
     })
 
+# Load model artifacts when module is imported
+if not load_model_artifacts():
+    logger.error("Failed to load model artifacts. Application may not work correctly.")
+
+# WSGI application callable
+application = app
+
 if __name__ == '__main__':
-    # Load model artifacts on startup
-    if not load_model_artifacts():
-        logger.error("Failed to load model artifacts. Exiting.")
-        exit(1)
-    
-    # Run the Flask app
+    # This will only run if the script is executed directly (for development)
     port = int(os.getenv('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=False)

@@ -195,22 +195,40 @@ if failures > 0 or errors > 0:
             }
             post {
                 always {
-                    // Publish test results
-                    publishTestResults testResultsPattern: 'test-results.xml'
-                    
-                    // Publish coverage reports
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'htmlcov',
-                        reportFiles: 'index.html',
-                        reportName: 'Coverage Report',
-                        reportTitles: 'Code Coverage'
-                    ])
-                    
-                    // Archive artifacts
-                    archiveArtifacts artifacts: 'test-results.xml,coverage.xml,htmlcov/**', allowEmptyArchive: true
+                    script {
+                        def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                        echo "[${timestamp}] 📊 Processing test results"
+                        
+                        // Archive artifacts (this always works)
+                        archiveArtifacts artifacts: 'test-results.xml,coverage.xml,htmlcov/**', allowEmptyArchive: true
+                        
+                        // Display summary in Jenkins log
+                        if (fileExists('test-results.xml')) {
+                            sh '''
+                                echo "📋 Test Results Summary:"
+                                echo "========================"
+                                python -c "
+import xml.etree.ElementTree as ET
+tree = ET.parse('test-results.xml')
+root = tree.getroot()
+tests = int(root.get('tests', 0))
+failures = int(root.get('failures', 0))
+errors = int(root.get('errors', 0))
+skipped = int(root.get('skipped', 0))
+passed = tests - failures - errors - skipped
+print(f'Total Tests: {tests}')
+print(f'Passed: {passed}')
+print(f'Failed: {failures}')
+print(f'Errors: {errors}')
+print(f'Skipped: {skipped}')
+print(f'Success Rate: {(passed/tests*100):.1f}%' if tests > 0 else 'N/A')
+"
+                                echo "========================"
+                            '''
+                        }
+                        
+                        echo "✅ Test stage completed - results archived and accessible"
+                    }
                 }
             }
         }

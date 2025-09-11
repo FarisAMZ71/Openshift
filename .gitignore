@@ -114,3 +114,44 @@ plots/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Security - Never commit these files
+*.token
+*.key
+*.pem
+*.p12
+*.jks
+config/secrets/
+.env
+.env.local
+.env.production
+kubeconfig
+.kube/config
+
+# Jenkins specific
+jenkins.properties
+jenkins-credentials.xml
+
+# OpenShift specific
+oc-login.sh
+openshift-token.txt
+cluster-config/
+
+# Logs
+*.log
+logs/
+*.out
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# Model artifacts (if they contain sensitive data)
+# Uncomment if your models contain proprietary information
+# models/
+# *.pkl
+# *.joblib
+# *.model

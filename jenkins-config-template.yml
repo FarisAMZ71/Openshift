@@ -1,0 +1,90 @@
+# Jenkins Pipeline Environment Configuration Template
+# Copy this file and customize for your Jenkins setup
+# DO NOT commit the actual values - use Jenkins credentials instead!
+
+# =============================================================================
+# JENKINS CREDENTIALS CONFIGURATION
+# =============================================================================
+# These are the credential IDs you need to create in Jenkins:
+
+JENKINS_CREDENTIAL_IDS:
+  # OpenShift Authentication
+  - id: "openshift-token"
+    type: "string"
+    description: "OpenShift service account token"
+    # Get with: oc whoami -t
+  
+  - id: "openshift-server-url" 
+    type: "string"
+    description: "OpenShift cluster API URL"
+    # Get with: oc cluster-info
+  
+  # Optional: Additional credentials for different environments
+  - id: "openshift-token-prod"
+    type: "string" 
+    description: "Production OpenShift token"
+  
+  - id: "registry-credentials"
+    type: "username-password"
+    description: "Container registry credentials (if using external registry)"
+
+# =============================================================================
+# ENVIRONMENT VARIABLES (Safe to commit)
+# =============================================================================
+DEVELOPMENT:
+  OPENSHIFT_PROJECT: "farisamz71-dev"
+  APP_NAME: "housing-price-api"
+  MIN_MODEL_ACCURACY: "0.75"  # Lower threshold for dev
+  MAX_ACCEPTABLE_MAE: "60000"
+  
+STAGING:
+  OPENSHIFT_PROJECT: "farisamz71-staging"
+  APP_NAME: "housing-price-api"
+  MIN_MODEL_ACCURACY: "0.80"
+  MAX_ACCEPTABLE_MAE: "50000"
+  
+PRODUCTION:
+  OPENSHIFT_PROJECT: "farisamz71-prod"
+  APP_NAME: "housing-price-api"
+  MIN_MODEL_ACCURACY: "0.85"  # Higher threshold for prod
+  MAX_ACCEPTABLE_MAE: "40000"
+  ADDITIONAL_SECURITY_SCANS: "true"
+
+# =============================================================================
+# JENKINS SETUP COMMANDS
+# =============================================================================
+# Run these commands to set up your Jenkins credentials:
+
+# 1. Get your OpenShift token
+# oc whoami -t
+
+# 2. Get your OpenShift server URL  
+# oc cluster-info | grep 'Kubernetes control plane' | awk '{print $7}'
+
+# 3. Create service account (recommended)
+# oc create sa jenkins-deployer -n farisamz71-dev
+# oc policy add-role-to-user edit system:serviceaccount:farisamz71-dev:jenkins-deployer -n farisamz71-dev
+# oc sa get-token jenkins-deployer -n farisamz71-dev
+
+# =============================================================================
+# MULTI-ENVIRONMENT JENKINSFILE EXAMPLE
+# =============================================================================
+# Use this pattern in your Jenkinsfile for different environments:
+
+# withCredentials([
+#     string(credentialsId: params.ENVIRONMENT == 'prod' ? 'openshift-token-prod' : 'openshift-token', 
+#            variable: 'OC_TOKEN'),
+#     string(credentialsId: 'openshift-server-url', variable: 'OC_SERVER')
+# ]) {
+#     sh "oc login --token=${OC_TOKEN} --server=${OC_SERVER}"
+# }
+
+# =============================================================================
+# BRANCH-BASED DEPLOYMENT STRATEGY
+# =============================================================================
+BRANCH_MAPPING:
+  main: production
+  master: production  
+  develop: staging
+  feature/*: development
+  hotfix/*: staging

@@ -250,23 +250,30 @@ except Exception as e:
                 script {
                     echo "🐳 Building container image"
                     
-                    // Login to OpenShift
-                    sh '''
-                        oc login --token=${OPENSHIFT_TOKEN} --server=${OPENSHIFT_SERVER} --insecure-skip-tls-verify=true
-                        oc project ${OPENSHIFT_PROJECT}
-                    '''
-                    
-                    // Start build from current directory
-                    sh '''
-                        echo "Starting OpenShift build..."
-                        oc start-build ${APP_NAME} --from-dir=. --follow --wait
+                    // Use Jenkins credentials securely
+                    withCredentials([
+                        string(credentialsId: 'openshift-token', variable: 'OC_TOKEN'),
+                        string(credentialsId: 'openshift-server-url', variable: 'OC_SERVER')
+                    ]) {
+                        // Login to OpenShift
+                        sh '''
+                            echo "🔐 Logging into OpenShift cluster..."
+                            oc login --token=${OC_TOKEN} --server=${OC_SERVER} --insecure-skip-tls-verify=true
+                            oc project ${OPENSHIFT_PROJECT}
+                        '''
                         
-                        # Tag the image with build version
-                        oc tag ${APP_NAME}:latest ${APP_NAME}:${BUILD_VERSION}
-                        
-                        echo "✅ Container image built and tagged successfully"
-                        echo "   Image: ${APP_NAME}:${BUILD_VERSION}"
-                    '''
+                        // Start build from current directory
+                        sh '''
+                            echo "Starting OpenShift build..."
+                            oc start-build ${APP_NAME} --from-dir=. --follow --wait
+                            
+                            # Tag the image with build version
+                            oc tag ${APP_NAME}:latest ${APP_NAME}:${BUILD_VERSION}
+                            
+                            echo "✅ Container image built and tagged successfully"
+                            echo "   Image: ${APP_NAME}:${BUILD_VERSION}"
+                        '''
+                    }
                 }
             }
         }
@@ -302,51 +309,62 @@ except Exception as e:
                 script {
                     echo "🚀 Deploying to OpenShift"
                     
-                    try {
-                        // Apply OpenShift configurations
-                        sh '''
-                            echo "Applying OpenShift configurations..."
+                    withCredentials([
+                        string(credentialsId: 'openshift-token', variable: 'OC_TOKEN'),
+                        string(credentialsId: 'openshift-server-url', variable: 'OC_SERVER')
+                    ]) {
+                        try {
+                            // Ensure we're logged in
+                            sh '''
+                                oc login --token=${OC_TOKEN} --server=${OC_SERVER} --insecure-skip-tls-verify=true
+                                oc project ${OPENSHIFT_PROJECT}
+                            '''
                             
-                            # Apply all configurations
-                            oc apply -f openshift/ -n ${OPENSHIFT_PROJECT}
+                            // Apply OpenShift configurations
+                            sh '''
+                                echo "Applying OpenShift configurations..."
+                                
+                                # Apply all configurations
+                                oc apply -f openshift/ -n ${OPENSHIFT_PROJECT}
+                                
+                                # Update deployment with new image
+                                oc set image deployment/${APP_NAME} api=image-registry.openshift-image-registry.svc:5000/${OPENSHIFT_PROJECT}/${APP_NAME}:${BUILD_VERSION} -n ${OPENSHIFT_PROJECT}
+                                
+                                # Wait for rollout to complete
+                                echo "Waiting for deployment rollout..."
+                                oc rollout status deployment/${APP_NAME} -n ${OPENSHIFT_PROJECT} --timeout=300s
+                                
+                                # Verify deployment
+                                oc get pods -l app=${APP_NAME} -n ${OPENSHIFT_PROJECT}
+                                
+                                echo "✅ Deployment completed successfully"
+                            '''
                             
-                            # Update deployment with new image
-                            oc set image deployment/${APP_NAME} api=image-registry.openshift-image-registry.svc:5000/${OPENSHIFT_PROJECT}/${APP_NAME}:${BUILD_VERSION} -n ${OPENSHIFT_PROJECT}
-                            
-                            # Wait for rollout to complete
-                            echo "Waiting for deployment rollout..."
-                            oc rollout status deployment/${APP_NAME} -n ${OPENSHIFT_PROJECT} --timeout=300s
-                            
-                            # Verify deployment
-                            oc get pods -l app=${APP_NAME} -n ${OPENSHIFT_PROJECT}
-                            
-                            echo "✅ Deployment completed successfully"
-                        '''
-                        
-                        // Get application URL
-                        script {
-                            def route = sh(
-                                script: "oc get route ${APP_NAME} -n ${OPENSHIFT_PROJECT} -o jsonpath='{.spec.host}'",
-                                returnStdout: true
-                            ).trim()
-                            
-                            if (route) {
-                                env.APP_URL = "https://${route}"
-                                echo "🌐 Application URL: ${env.APP_URL}"
+                            // Get application URL
+                            script {
+                                def route = sh(
+                                    script: "oc get route ${APP_NAME} -n ${OPENSHIFT_PROJECT} -o jsonpath='{.spec.host}'",
+                                    returnStdout: true
+                                ).trim()
+                                
+                                if (route) {
+                                    env.APP_URL = "https://${route}"
+                                    echo "🌐 Application URL: ${env.APP_URL}"
+                                }
                             }
+                            
+                        } catch (Exception e) {
+                            echo "❌ Deployment failed: ${e.getMessage()}"
+                            
+                            // Rollback on failure
+                            sh '''
+                                echo "🔄 Rolling back deployment..."
+                                oc rollout undo deployment/${APP_NAME} -n ${OPENSHIFT_PROJECT}
+                                oc rollout status deployment/${APP_NAME} -n ${OPENSHIFT_PROJECT} --timeout=300s
+                            '''
+                            
+                            throw e
                         }
-                        
-                    } catch (Exception e) {
-                        echo "❌ Deployment failed: ${e.getMessage()}"
-                        
-                        // Rollback on failure
-                        sh '''
-                            echo "🔄 Rolling back deployment..."
-                            oc rollout undo deployment/${APP_NAME} -n ${OPENSHIFT_PROJECT}
-                            oc rollout status deployment/${APP_NAME} -n ${OPENSHIFT_PROJECT} --timeout=300s
-                        '''
-                        
-                        throw e
                     }
                 }
             }

@@ -49,3 +49,8 @@ wheel
 wrapt
 zope.event
 zope.interface
+pytest>=7.0.0
+pytest-cov>=4.0.0
+flake8>=5.0.0
+pylint>=2.15.0
+requests>=2.28.0

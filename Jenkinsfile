@@ -21,13 +21,17 @@ pipeline {
     options {
         timeout(time: 30, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '10'))
-        timestamps()
+        skipDefaultCheckout(false)
     }
     
     stages {
         stage('Checkout') {
             steps {
-                echo "🔄 Checking out code from ${GIT_BRANCH} branch"
+                // Add timestamp manually since timestamps() option isn't available
+                script {
+                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    echo "[${timestamp}] 🔄 Checking out code from ${GIT_BRANCH} branch"
+                }
                 checkout scm
                 
                 script {
@@ -36,18 +40,22 @@ pipeline {
                         returnStdout: true
                     ).trim()
                     env.BUILD_VERSION = "${IMAGE_TAG}-${GIT_COMMIT_SHORT}"
+                    
+                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    echo "[${timestamp}] 📋 Build Info:"
+                    echo "  - Branch: ${GIT_BRANCH}"
+                    echo "  - Commit: ${env.GIT_COMMIT_SHORT}"
+                    echo "  - Build Version: ${env.BUILD_VERSION}"
                 }
-                
-                echo "📋 Build Info:"
-                echo "  - Branch: ${GIT_BRANCH}"
-                echo "  - Commit: ${env.GIT_COMMIT_SHORT}"
-                echo "  - Build Version: ${env.BUILD_VERSION}"
             }
         }
         
         stage('Setup Python Environment') {
             steps {
-                echo "🐍 Setting up Python environment"
+                script {
+                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    echo "[${timestamp}] 🐍 Setting up Python environment"
+                }
                 sh '''
                     python3 -m venv venv
                     . venv/bin/activate
@@ -63,7 +71,10 @@ pipeline {
             parallel {
                 stage('Flake8 Linting') {
                     steps {
-                        echo "🔍 Running Flake8 linting"
+                        script {
+                            def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                            echo "[${timestamp}] 🔍 Running Flake8 linting"
+                        }
                         sh '''
                             . venv/bin/activate
                             flake8 application/ tests/ --max-line-length=120 --exclude=__pycache__ \
@@ -86,7 +97,10 @@ pipeline {
                 
                 stage('Pylint Analysis') {
                     steps {
-                        echo "📊 Running Pylint analysis"
+                        script {
+                            def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                            echo "[${timestamp}] 📊 Running Pylint analysis"
+                        }
                         sh '''
                             . venv/bin/activate
                             pylint application/ --output-format=text --reports=yes \
@@ -106,7 +120,10 @@ pipeline {
         
         stage('Run Tests') {
             steps {
-                echo "🧪 Running pytest with coverage"
+                script {
+                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    echo "[${timestamp}] 🧪 Running pytest with coverage"
+                }
                 sh '''
                     . venv/bin/activate
                     
@@ -167,7 +184,10 @@ if failures > 0 or errors > 0:
         
         stage('Model Validation') {
             steps {
-                echo "🤖 Training and validating ML model"
+                script {
+                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    echo "[${timestamp}] 🤖 Training and validating ML model"
+                }
                 sh '''
                     . venv/bin/activate
                     
@@ -248,7 +268,8 @@ except Exception as e:
             }
             steps {
                 script {
-                    echo "🐳 Building container image"
+                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    echo "[${timestamp}] 🐳 Building container image"
                     
                     // Use Jenkins credentials securely
                     withCredentials([
@@ -287,7 +308,10 @@ except Exception as e:
                 }
             }
             steps {
-                echo "🔒 Running security scan on container image"
+                script {
+                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    echo "[${timestamp}] 🔒 Running security scan on container image"
+                }
                 sh '''
                     # Run OpenShift image scan (if available)
                     oc describe is/${APP_NAME} | grep -A 10 "Image Vulnerabilities" || echo "No vulnerability scan results available"
@@ -307,7 +331,8 @@ except Exception as e:
             }
             steps {
                 script {
-                    echo "🚀 Deploying to OpenShift"
+                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    echo "[${timestamp}] 🚀 Deploying to OpenShift"
                     
                     withCredentials([
                         string(credentialsId: 'openshift-token', variable: 'OC_TOKEN'),
@@ -380,7 +405,8 @@ except Exception as e:
             steps {
                 script {
                     if (env.APP_URL) {
-                        echo "🧪 Running post-deployment health checks"
+                        def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                        echo "[${timestamp}] 🧪 Running post-deployment health checks"
                         sh '''
                             # Wait a bit for the application to be fully ready
                             sleep 30
@@ -414,7 +440,10 @@ except Exception as e:
     
     post {
         always {
-            echo "🧹 Cleaning up workspace"
+            script {
+                def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                echo "[${timestamp}] 🧹 Cleaning up workspace"
+            }
             
             // Clean up virtual environment
             sh 'rm -rf venv || true'
@@ -424,9 +453,10 @@ except Exception as e:
         }
         
         success {
-            echo "✅ Pipeline completed successfully!"
-            
             script {
+                def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                echo "[${timestamp}] ✅ Pipeline completed successfully!"
+                
                 def message = """
 🎉 **Deployment Successful!**
 
@@ -451,9 +481,10 @@ except Exception as e:
         }
         
         failure {
-            echo "❌ Pipeline failed!"
-            
             script {
+                def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                echo "[${timestamp}] ❌ Pipeline failed!"
+                
                 def message = """
 🚨 **Deployment Failed!**
 
@@ -475,7 +506,10 @@ except Exception as e:
         }
         
         unstable {
-            echo "⚠️ Pipeline completed with warnings"
+            script {
+                def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+                echo "[${timestamp}] ⚠️ Pipeline completed with warnings"
+            }
         }
     }
 }

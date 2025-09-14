@@ -86,36 +86,69 @@ def train_model(model, X_train, y_train, X_test, y_test):
     return model, test_mae
 
 def save_artifacts(model, scaler, feature_names, metrics):
-    """Save model and preprocessing artifacts"""
+    """Save model and preprocessing artifacts with version compatibility"""
     os.makedirs('models', exist_ok=True)
     
-    # Save the XGBoost model
-    model_path = 'models/housing_model.json'
-    model.save_model(model_path)
-    print(f"\n💾 Model saved to {model_path}")
+    print(f"\n💾 Saving model artifacts (XGBoost version: {xgb.__version__})...")
+    
+    # Save the XGBoost model in JSON format (newer versions)
+    try:
+        model_path = 'models/housing_model.json'
+        model.save_model(model_path)
+        print(f"   ✅ Model saved to {model_path} (JSON format)")
+    except Exception as e:
+        print(f"   ⚠️ JSON save failed: {str(e)}")
+    
+    # Also save as pickle for compatibility with older XGBoost versions
+    try:
+        with open('models/housing_model.pkl', 'wb') as f:
+            pickle.dump(model, f)
+        print(f"   ✅ Model saved to models/housing_model.pkl (pickle format)")
+    except Exception as e:
+        print(f"   ⚠️ Pickle save failed: {str(e)}")
     
     # Save the scaler
     with open('models/scaler.pkl', 'wb') as f:
         pickle.dump(scaler, f)
-    print(f"   Scaler saved to models/scaler.pkl")
+    print(f"   ✅ Scaler saved to models/scaler.pkl")
     
-    # Save metadata
+    # Save metadata with performance metrics
     metadata = {
         'feature_names': feature_names,
         'model_version': '1.0.0',
         'training_date': datetime.now().isoformat(),
-        'test_mae': float(metrics),
+        'performance_metrics': {
+            'mae': float(metrics),
+            'test_mae': float(metrics),  # Keep for backward compatibility
+            'r2_score': 0.0  # Will be calculated in test_model.py
+        },
         'framework': 'xgboost',
         'framework_version': xgb.__version__,
         'model_type': 'XGBRegressor',
-        'n_estimators': int(model.n_estimators),
-        'max_depth': int(model.max_depth),
-        'learning_rate': float(model.learning_rate)
+        'hyperparameters': {
+            'n_estimators': int(model.n_estimators),
+            'max_depth': int(model.max_depth),
+            'learning_rate': float(model.learning_rate),
+            'subsample': float(model.subsample),
+            'colsample_bytree': float(model.colsample_bytree)
+        },
+        'training_notes': 'Model saved in both JSON and pickle formats for compatibility'
     }
     
     with open('models/metadata.json', 'w') as f:
         json.dump(metadata, f, indent=2)
-    print(f"   Metadata saved to models/metadata.json")
+    print(f"   ✅ Metadata saved to models/metadata.json")
+    
+    # Verify the saved files
+    saved_files = ['models/housing_model.json', 'models/housing_model.pkl', 'models/scaler.pkl', 'models/metadata.json']
+    for file_path in saved_files:
+        if os.path.exists(file_path):
+            size_mb = os.path.getsize(file_path) / (1024 * 1024)
+            print(f"   📁 {file_path}: {size_mb:.2f} MB")
+        else:
+            print(f"   ❌ {file_path}: Not found!")
+    
+    return metadata
 
 def main():
     """Main training pipeline"""

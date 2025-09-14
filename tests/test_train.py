@@ -3,8 +3,7 @@ import numpy as np
 import os
 import json
 import tempfile
-from unittest.mock import Mock, patch, MagicMock
-from sklearn.datasets import fetch_california_housing
+from unittest.mock import Mock, patch
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 

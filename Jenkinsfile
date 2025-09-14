@@ -76,7 +76,7 @@ pipeline {
                     
                     echo "📦 Installing lightweight packages first..."
                     pip install --timeout=300 --retries=3 --no-cache-dir \
-                        flask flask-cors python-dotenv pytest pytest-cov flake8 pylint
+                        flask flask-cors python-dotenv pytest pytest-cov 
                     
                     echo "📦 Installing ML packages (this may take a while)..."
                     # Install heavy packages one by one with longer timeouts
@@ -97,57 +97,6 @@ pipeline {
                     echo "📊 Key packages verification:"
                     pip list | grep -E "(pytest|flask|scikit-learn|xgboost|pandas|numpy)" || echo "Some packages may not be installed"
                 '''
-            }
-        }
-        
-        stage('Code Quality & Linting') {
-            parallel {
-                stage('Flake8 Linting') {
-                    steps {
-                        script {
-                            def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
-                            echo "[${timestamp}] 🔍 Running Flake8 linting"
-                        }
-                        sh '''
-                            . venv/bin/activate
-                            flake8 application/ tests/ --max-line-length=120 --exclude=__pycache__ \
-                                --format='%(path)s:%(row)d:%(col)d: %(code)s %(text)s' \
-                                --output-file=flake8-report.txt || true
-                            if [ -s flake8-report.txt ]; then
-                                echo "⚠️  Flake8 issues found:"
-                                cat flake8-report.txt
-                            else
-                                echo "✅ No Flake8 issues found"
-                            fi
-                        '''
-                    }
-                    post {
-                        always {
-                            archiveArtifacts artifacts: 'flake8-report.txt', allowEmptyArchive: true
-                        }
-                    }
-                }
-                
-                stage('Pylint Analysis') {
-                    steps {
-                        script {
-                            def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
-                            echo "[${timestamp}] 📊 Running Pylint analysis"
-                        }
-                        sh '''
-                            . venv/bin/activate
-                            pylint application/ --output-format=text --reports=yes \
-                                --output=pylint-report.txt --exit-zero
-                            echo "📈 Pylint analysis completed"
-                            tail -10 pylint-report.txt || echo "No pylint report generated"
-                        '''
-                    }
-                    post {
-                        always {
-                            archiveArtifacts artifacts: 'pylint-report.txt', allowEmptyArchive: true
-                        }
-                    }
-                }
             }
         }
         

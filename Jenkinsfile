@@ -51,24 +51,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Debug Branch Info') {
-            steps {
-                script {
-                    def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
-                    echo "[${timestamp}] 🔍 Debug: Branch information"
-                    echo "BRANCH_NAME: ${env.BRANCH_NAME}"
-                    echo "GIT_BRANCH: ${env.GIT_BRANCH}"
-                    echo "BUILD_BRANCH: ${env.BUILD_BRANCH ?: 'Not set'}"
-                }
-                sh '''
-                    echo "Git branch from command line:"
-                    git branch --show-current || git rev-parse --abbrev-ref HEAD
-                    echo "All local branches:"
-                    git branch -a
-                '''
-            }
-        }
         
         stage('Setup Python Environment') {
             steps {
@@ -269,13 +251,6 @@ except Exception as e:
         }
         
         stage('Build Container Image') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
-                    branch 'develop'
-                }
-            }
             steps {
                 script {
                     def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
@@ -310,13 +285,6 @@ except Exception as e:
         }
         
         stage('Security Scan') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
-                    branch 'develop'
-                }
-            }
             steps {
                 script {
                     def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
@@ -333,12 +301,6 @@ except Exception as e:
         }
         
         stage('Deploy to OpenShift') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
-                }
-            }
             steps {
                 script {
                     def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
@@ -406,12 +368,6 @@ except Exception as e:
         }
         
         stage('Post-Deployment Tests') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
-                }
-            }
             steps {
                 script {
                     if (env.APP_URL) {

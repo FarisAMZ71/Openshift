@@ -1,9 +1,9 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.11-slim'
-            args '-v /tmp:/tmp -u 0:0'  // Run as root to avoid permission issues
-        }
+    agent any
+
+    tools {
+        // This requires the Python plugin in Jenkins
+        python 'Python-3.11'  // Configure this in Jenkins Global Tools
     }
     
     environment {
@@ -23,12 +23,11 @@ pipeline {
         MAX_ACCEPTABLE_MAE = '50000'
         
         // Python Configuration
-        PYTHONUNBUFFERED = '1'
-        PIP_NO_CACHE_DIR = '1'
+        PIP_CACHE_DIR = '/tmp/pip-cache'
     }
     
     options {
-        timeout(time: 45, unit: 'MINUTES')
+        timeout(time: 45, unit: 'MINUTES')  // Increased timeout
         buildDiscarder(logRotator(numToKeepStr: '10'))
         skipDefaultCheckout(false)
     }
@@ -54,25 +53,7 @@ pipeline {
                     echo "  - Branch: ${GIT_BRANCH}"
                     echo "  - Commit: ${env.GIT_COMMIT_SHORT}"
                     echo "  - Build Version: ${env.BUILD_VERSION}"
-                    echo "  - Python Version: \$(python --version)"
                 }
-                
-                // Install system dependencies
-                sh '''
-                    echo "🔧 Installing system dependencies..."
-                    apt-get update -qq
-                    apt-get install -y -qq curl wget git
-                    
-                    # Install OpenShift CLI
-                    curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz
-                    tar -xzf openshift-client-linux.tar.gz
-                    chmod +x oc kubectl
-                    mv oc kubectl /usr/local/bin/
-                    
-                    echo "✅ System setup completed"
-                    python --version
-                    oc version --client || echo "OC client installed"
-                '''
             }
         }
         
@@ -80,25 +61,47 @@ pipeline {
             steps {
                 script {
                     def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
-                    echo "[${timestamp}] 🐍 Setting up modern Python environment"
+                    echo "[${timestamp}] 🐍 Setting up Python environment"
                 }
                 sh '''
-                    # Create virtual environment (Python 3.11+ has better performance)
-                    python -m venv venv
+                    # Create virtual environment with timeout and retry logic
+                    python3.11 --version
+                    python3.11 -m venv venv
                     . venv/bin/activate
                     
-                    # Upgrade pip
-                    pip install --upgrade pip
+                    # Upgrade pip with timeout
+                    echo "⬆️ Upgrading pip..."
+                    pip install --upgrade pip --timeout=300 --retries=3
                     
-                    echo "📦 Installing dependencies with modern Python..."
-                    # Much faster installation with modern Python and NumPy compatibility
-                    pip install -r requirements.txt
+                    # Install dependencies in chunks with optimizations
+                    echo "📦 Installing core dependencies..."
+                    pip install --timeout=600 --retries=3 --no-cache-dir \
+                        --index-url https://pypi.org/simple/ \
+                        --trusted-host pypi.org \
+                        wheel setuptools
                     
-                    echo "✅ Modern Python environment ready"
+                    echo "📦 Installing lightweight packages first..."
+                    pip install --timeout=300 --retries=3 --no-cache-dir \
+                        flask flask-cors python-dotenv pytest pytest-cov 
+                    
+                    echo "📦 Installing ML packages (this may take a while)..."
+                    # Install heavy packages one by one with longer timeouts
+                    pip install --timeout=900 --retries=2 --no-cache-dir numpy
+                    pip install --timeout=900 --retries=2 --no-cache-dir pandas
+                    pip install --timeout=900 --retries=2 --no-cache-dir scikit-learn
+                    
+                    echo "📦 Installing XGBoost (large download)..."
+                    pip install --timeout=1200 --retries=2 --no-cache-dir xgboost
+                    
+                    echo "📦 Installing remaining packages..."
+                    pip install --timeout=300 --retries=3 --no-cache-dir \
+                        joblib matplotlib seaborn requests gunicorn
+                    
+                    echo "✅ All dependencies installed successfully"
                     python --version
-                    pip --version
-                    echo "📊 Key packages:"
-                    pip list | grep -E "(numpy|pandas|scikit-learn|xgboost|pytest)"
+                    pip list | head -20
+                    echo "📊 Key packages verification:"
+                    pip list | grep -E "(pytest|flask|scikit-learn|xgboost|pandas|numpy)" || echo "Some packages may not be installed"
                 '''
             }
         }

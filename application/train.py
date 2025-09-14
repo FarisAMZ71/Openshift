@@ -128,9 +128,7 @@ def save_artifacts(model, scaler, feature_names, metrics):
         'hyperparameters': {
             'n_estimators': int(model.n_estimators),
             'max_depth': int(model.max_depth),
-            'learning_rate': float(model.learning_rate),
-            'subsample': float(model.subsample),
-            'colsample_bytree': float(model.colsample_bytree)
+            'learning_rate': float(model.learning_rate)
         },
         'training_notes': 'Model saved in both JSON and pickle formats for compatibility'
     }

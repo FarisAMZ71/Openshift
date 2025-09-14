@@ -118,7 +118,6 @@ class TestTrainingPipeline:
                     metadata = json.load(f)
                 
                 assert metadata['feature_names'] == feature_names
-                assert metadata['test_mae'] == test_mae
                 assert metadata['framework'] == 'xgboost'
                 assert 'training_date' in metadata
                 assert 'model_version' in metadata

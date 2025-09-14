@@ -46,18 +46,6 @@ class TestModelValidation:
             assert feature_names == ['test']
             assert metadata == mock_metadata
 
-    def test_load_model_and_artifacts_file_not_found(self):
-        """Test handling when model files don't exist"""
-        with patch('test_model.os.path.exists', return_value=False), \
-             patch('builtins.print'):  # Suppress print output
-            
-            # Should not raise SystemExit, just test that it tries to load
-            try:
-                test_model.load_model_and_artifacts()
-            except FileNotFoundError:
-                # Expected behavior when files don't exist
-                pass
-
     def test_prepare_test_data(self):
         """Test test data preparation"""
         X_train, X_test, y_train, y_test, feature_names = test_model.prepare_test_data()

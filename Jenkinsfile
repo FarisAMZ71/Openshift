@@ -1,10 +1,5 @@
 pipeline {
     agent any
-
-    tools {
-        // This requires the Python plugin in Jenkins
-        python 'Python-3.11'  // Configure this in Jenkins Global Tools
-    }
     
     environment {
         // OpenShift Configuration
@@ -65,8 +60,7 @@ pipeline {
                 }
                 sh '''
                     # Create virtual environment with timeout and retry logic
-                    python3.11 --version
-                    python3.11 -m venv venv
+                    python3 -m venv venv
                     . venv/bin/activate
                     
                     # Upgrade pip with timeout

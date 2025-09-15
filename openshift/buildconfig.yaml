@@ -6,23 +6,20 @@ metadata:
   labels:
     app: housing-price-api
 spec:
-  source:
-    type: Git
-    git:
-      uri: https://github.com/your-username/housing-price-api.git
-      ref: main
-    contextDir: /
-  strategy:
-    type: Docker
-    dockerStrategy:
-      dockerfilePath: Dockerfile
   output:
     to:
       kind: ImageStreamTag
       name: housing-price-api:latest
+  source:
+    type: Binary  # Changed from Git to Binary
+    binary: {}    # Empty binary source
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
   triggers:
-  - type: ConfigChange
-  - type: ImageChange
+    - type: ConfigChange
+    - type: ImageChange
   
 ---
 apiVersion: image.openshift.io/v1

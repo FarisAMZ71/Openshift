@@ -1,0 +1,57 @@
+global:
+  postgresql:
+    auth:
+      postgresPassword: "postgres-password"
+      username: "housing_user"
+      password: "housing-password"
+      database: "housing_db"
+
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""  # Use default storage class
+  
+  resources:
+    limits:
+      memory: 512Mi
+      cpu: 500m
+    requests:
+      memory: 256Mi
+      cpu: 250m
+
+  service:
+    type: ClusterIP
+    ports:
+      postgresql: 5432
+
+  # OpenShift-specific security context fixes
+  securityContext:
+    enabled: false  # Disable to let OpenShift handle it
+  
+  containerSecurityContext:
+    enabled: false  # Disable to let OpenShift handle it
+
+  podSecurityContext:
+    enabled: false  # Disable to let OpenShift handle it
+
+  # OpenShift-specific settings
+  serviceAccount:
+    create: false  # Use default service account
+
+auth:
+  enablePostgresUser: true
+  usePasswordFiles: false  # Simplify password handling
+
+metrics:
+  enabled: false  # Disable for now to reduce complexity
+  serviceMonitor:
+    enabled: false
+
+# Disable volume permissions init container (causes issues in OpenShift)
+volumePermissions:
+  enabled: false
+
+# Disable shmem volume (can cause issues)
+shmVolume:
+  enabled: false

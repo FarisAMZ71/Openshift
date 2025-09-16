@@ -72,30 +72,7 @@ pipeline {
                     pip install --timeout=600 --retries=3 --no-cache-dir \
                         --index-url https://pypi.org/simple/ \
                         --trusted-host pypi.org \
-                        wheel setuptools
-                    
-                    echo "📦 Installing lightweight packages first..."
-                    pip install --timeout=300 --retries=3 --no-cache-dir \
-                        flask flask-cors python-dotenv pytest pytest-cov 
-                    
-                    echo "📦 Installing ML packages (this may take a while)..."
-                    # Install heavy packages one by one with longer timeouts
-                    pip install --timeout=900 --retries=2 --no-cache-dir numpy
-                    pip install --timeout=900 --retries=2 --no-cache-dir pandas
-                    pip install --timeout=900 --retries=2 --no-cache-dir scikit-learn
-                    
-                    echo "📦 Installing XGBoost (large download)..."
-                    pip install --timeout=1200 --retries=2 --no-cache-dir xgboost
-                    
-                    echo "📦 Installing remaining packages..."
-                    pip install --timeout=300 --retries=3 --no-cache-dir \
-                        joblib matplotlib seaborn requests gunicorn
-                    
-                    echo "✅ All dependencies installed successfully"
-                    python --version
-                    pip list | head -20
-                    echo "📊 Key packages verification:"
-                    pip list | grep -E "(pytest|flask|scikit-learn|xgboost|pandas|numpy)" || echo "Some packages may not be installed"
+                        -r requirements.txt
                 '''
             }
         }
@@ -119,23 +96,23 @@ pipeline {
                     if [ -f test-results.xml ]; then
                         echo "✅ Test results generated successfully"
                         python -c "
-import xml.etree.ElementTree as ET
-tree = ET.parse('test-results.xml')
-root = tree.getroot()
-tests = int(root.get('tests', 0))
-failures = int(root.get('failures', 0))
-errors = int(root.get('errors', 0))
-skipped = int(root.get('skipped', 0))
-passed = tests - failures - errors - skipped
-print(f'📊 Test Summary:')
-print(f'  ✅ Passed: {passed}')
-print(f'  ❌ Failed: {failures}')
-print(f'  🚨 Errors: {errors}')
-print(f'  ⏭️  Skipped: {skipped}')
-print(f'  📈 Total: {tests}')
-if failures > 0 or errors > 0:
-    exit(1)
-"
+                            import xml.etree.ElementTree as ET
+                            tree = ET.parse('test-results.xml')
+                            root = tree.getroot()
+                            tests = int(root.get('tests', 0))
+                            failures = int(root.get('failures', 0))
+                            errors = int(root.get('errors', 0))
+                            skipped = int(root.get('skipped', 0))
+                            passed = tests - failures - errors - skipped
+                            print(f'📊 Test Summary:')
+                            print(f'  ✅ Passed: {passed}')
+                            print(f'  ❌ Failed: {failures}')
+                            print(f'  🚨 Errors: {errors}')
+                            print(f'  ⏭️  Skipped: {skipped}')
+                            print(f'  📈 Total: {tests}')
+                            if failures > 0 or errors > 0:
+                                exit(1)
+                            "
                     else
                         echo "❌ No test results file generated"
                         exit 1
@@ -157,21 +134,21 @@ if failures > 0 or errors > 0:
                                 echo "📋 Test Results Summary:"
                                 echo "========================"
                                 python -c "
-import xml.etree.ElementTree as ET
-tree = ET.parse('test-results.xml')
-root = tree.getroot()
-tests = int(root.get('tests', 0))
-failures = int(root.get('failures', 0))
-errors = int(root.get('errors', 0))
-skipped = int(root.get('skipped', 0))
-passed = tests - failures - errors - skipped
-print(f'Total Tests: {tests}')
-print(f'Passed: {passed}')
-print(f'Failed: {failures}')
-print(f'Errors: {errors}')
-print(f'Skipped: {skipped}')
-print(f'Success Rate: {(passed/tests*100):.1f}%' if tests > 0 else 'N/A')
-"
+                                    import xml.etree.ElementTree as ET
+                                    tree = ET.parse('test-results.xml')
+                                    root = tree.getroot()
+                                    tests = int(root.get('tests', 0))
+                                    failures = int(root.get('failures', 0))
+                                    errors = int(root.get('errors', 0))
+                                    skipped = int(root.get('skipped', 0))
+                                    passed = tests - failures - errors - skipped
+                                    print(f'Total Tests: {tests}')
+                                    print(f'Passed: {passed}')
+                                    print(f'Failed: {failures}')
+                                    print(f'Errors: {errors}')
+                                    print(f'Skipped: {skipped}')
+                                    print(f'Success Rate: {(passed/tests*100):.1f}%' if tests > 0 else 'N/A')
+                                    "
                                 echo "========================"
                             '''
                         }
@@ -214,33 +191,33 @@ print(f'Success Rate: {(passed/tests*100):.1f}%' if tests > 0 else 'N/A')
                     
                     # Validate model performance
                     python -c "
-import json
-import sys
+                        import json
+                        import sys
 
-try:
-    with open('models/metadata.json', 'r') as f:
-        metadata = json.load(f)
-    
-    print('📊 Model Performance Metrics:')
-    for metric, value in metadata.get('performance_metrics', {}).items():
-        print(f'  {metric}: {value:.4f}')
-    
-    # Check model accuracy/performance thresholds
-    r2_score = metadata.get('performance_metrics', {}).get('r2_score', 0)
-    mae = metadata.get('performance_metrics', {}).get('mae', float('inf'))
-    
-    print(f'\\n🎯 Validation Thresholds:')
-    print(f'  Minimum R² Score: ${MIN_MODEL_ACCURACY}')
-    print(f'  Maximum MAE: ${MAX_ACCEPTABLE_MAE}')
-    print(f'  Current R² Score: {r2_score:.4f}')
-    print(f'  Current MAE: {mae:.2f}')
-    
-    print('✅ Model validation passed!')
-    
-except Exception as e:
-    print(f'❌ Error validating model: {e}')
-    sys.exit(1)
-"
+                        try:
+                            with open('models/metadata.json', 'r') as f:
+                                metadata = json.load(f)
+                            
+                            print('📊 Model Performance Metrics:')
+                            for metric, value in metadata.get('performance_metrics', {}).items():
+                                print(f'  {metric}: {value:.4f}')
+                            
+                            # Check model accuracy/performance thresholds
+                            r2_score = metadata.get('performance_metrics', {}).get('r2_score', 0)
+                            mae = metadata.get('performance_metrics', {}).get('mae', float('inf'))
+                            
+                            print(f'\\n🎯 Validation Thresholds:')
+                            print(f'  Minimum R² Score: ${MIN_MODEL_ACCURACY}')
+                            print(f'  Maximum MAE: ${MAX_ACCEPTABLE_MAE}')
+                            print(f'  Current R² Score: {r2_score:.4f}')
+                            print(f'  Current MAE: {mae:.2f}')
+                            
+                            print('✅ Model validation passed!')
+                            
+                        except Exception as e:
+                            print(f'❌ Error validating model: {e}')
+                            sys.exit(1)
+                        "
                 '''
             }
             post {
@@ -353,7 +330,7 @@ except Exception as e:
                         } catch (Exception e) {
                             echo "❌ Deployment failed: ${e.getMessage()}"
                             
-                            // Rollback on failure
+                            // Rollback on failure (fix later to add app version)
                             sh '''
                                 echo "🔄 Rolling back deployment..."
                                 oc rollout undo deployment/${APP_NAME} -n ${OPENSHIFT_PROJECT}

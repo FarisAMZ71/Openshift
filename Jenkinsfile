@@ -119,22 +119,22 @@ pipeline {
                     if [ -f test-results.xml ]; then
                         echo "✅ Test results generated successfully"
                         python -c "
-                            import xml.etree.ElementTree as ET
-                            tree = ET.parse('test-results.xml')
-                            root = tree.getroot()
-                            tests = int(root.get('tests', 0))
-                            failures = int(root.get('failures', 0))
-                            errors = int(root.get('errors', 0))
-                            skipped = int(root.get('skipped', 0))
-                            passed = tests - failures - errors - skipped
-                            print(f'📊 Test Summary:')
-                            print(f'  ✅ Passed: {passed}')
-                            print(f'  ❌ Failed: {failures}')
-                            print(f'  🚨 Errors: {errors}')
-                            print(f'  ⏭️  Skipped: {skipped}')
-                            print(f'  📈 Total: {tests}')
-                            if failures > 0 or errors > 0:
-                                exit(1)
+import xml.etree.ElementTree as ET
+tree = ET.parse('test-results.xml')
+root = tree.getroot()
+tests = int(root.get('tests', 0))
+failures = int(root.get('failures', 0))
+errors = int(root.get('errors', 0))
+skipped = int(root.get('skipped', 0))
+passed = tests - failures - errors - skipped
+print(f'📊 Test Summary:')
+print(f'  ✅ Passed: {passed}')
+print(f'  ❌ Failed: {failures}')
+print(f'  🚨 Errors: {errors}')
+print(f'  ⏭️  Skipped: {skipped}')
+print(f'  📈 Total: {tests}')
+if failures > 0 or errors > 0:
+    exit(1)
                             "
                     else
                         echo "❌ No test results file generated"
@@ -157,20 +157,20 @@ pipeline {
                                 echo "📋 Test Results Summary:"
                                 echo "========================"
                                 python -c "
-                                    import xml.etree.ElementTree as ET
-                                    tree = ET.parse('test-results.xml')
-                                    root = tree.getroot()
-                                    tests = int(root.get('tests', 0))
-                                    failures = int(root.get('failures', 0))
-                                    errors = int(root.get('errors', 0))
-                                    skipped = int(root.get('skipped', 0))
-                                    passed = tests - failures - errors - skipped
-                                    print(f'Total Tests: {tests}')
-                                    print(f'Passed: {passed}')
-                                    print(f'Failed: {failures}')
-                                    print(f'Errors: {errors}')
-                                    print(f'Skipped: {skipped}')
-                                    print(f'Success Rate: {(passed/tests*100):.1f}%' if tests > 0 else 'N/A')
+import xml.etree.ElementTree as ET
+tree = ET.parse('test-results.xml')
+root = tree.getroot()
+tests = int(root.get('tests', 0))
+failures = int(root.get('failures', 0))
+errors = int(root.get('errors', 0))
+skipped = int(root.get('skipped', 0))
+passed = tests - failures - errors - skipped
+print(f'Total Tests: {tests}')
+print(f'Passed: {passed}')
+print(f'Failed: {failures}')
+print(f'Errors: {errors}')
+print(f'Skipped: {skipped}')
+print(f'Success Rate: {(passed/tests*100):.1f}%' if tests > 0 else 'N/A')
                                     "
                                 echo "========================"
                             '''
@@ -214,32 +214,32 @@ pipeline {
                     
                     # Validate model performance
                     python -c "
-                        import json
-                        import sys
+import json
+import sys
 
-                        try:
-                            with open('models/metadata.json', 'r') as f:
-                                metadata = json.load(f)
-                            
-                            print('📊 Model Performance Metrics:')
-                            for metric, value in metadata.get('performance_metrics', {}).items():
-                                print(f'  {metric}: {value:.4f}')
-                            
-                            # Check model accuracy/performance thresholds
-                            r2_score = metadata.get('performance_metrics', {}).get('r2_score', 0)
-                            mae = metadata.get('performance_metrics', {}).get('mae', float('inf'))
-                            
-                            print(f'\\n🎯 Validation Thresholds:')
-                            print(f'  Minimum R² Score: ${MIN_MODEL_ACCURACY}')
-                            print(f'  Maximum MAE: ${MAX_ACCEPTABLE_MAE}')
-                            print(f'  Current R² Score: {r2_score:.4f}')
-                            print(f'  Current MAE: {mae:.2f}')
-                            
-                            print('✅ Model validation passed!')
-                            
-                        except Exception as e:
-                            print(f'❌ Error validating model: {e}')
-                            sys.exit(1)
+try:
+    with open('models/metadata.json', 'r') as f:
+        metadata = json.load(f)
+    
+    print('📊 Model Performance Metrics:')
+    for metric, value in metadata.get('performance_metrics', {}).items():
+        print(f'  {metric}: {value:.4f}')
+    
+    # Check model accuracy/performance thresholds
+    r2_score = metadata.get('performance_metrics', {}).get('r2_score', 0)
+    mae = metadata.get('performance_metrics', {}).get('mae', float('inf'))
+    
+    print(f'\\n🎯 Validation Thresholds:')
+    print(f'  Minimum R² Score: ${MIN_MODEL_ACCURACY}')
+    print(f'  Maximum MAE: ${MAX_ACCEPTABLE_MAE}')
+    print(f'  Current R² Score: {r2_score:.4f}')
+    print(f'  Current MAE: {mae:.2f}')
+    
+    print('✅ Model validation passed!')
+    
+except Exception as e:
+    print(f'❌ Error validating model: {e}')
+    sys.exit(1)
                         "
                 '''
             }

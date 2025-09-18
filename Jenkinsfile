@@ -256,7 +256,6 @@ except Exception as e:
                     def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
                     echo "[${timestamp}] 🐳 Building container image"
                     
-                    // Use Jenkins credentials securely
                     withCredentials([
                         string(credentialsId: 'openshift-token', variable: 'OC_TOKEN'),
                         string(credentialsId: 'openshift-server-url', variable: 'OC_SERVER')
@@ -268,10 +267,53 @@ except Exception as e:
                             oc project ${OPENSHIFT_PROJECT}
                         '''
                         
+                        // Ensure ImageStream exists
+                        sh '''
+                            echo "📦 Ensuring ImageStream exists..."
+                            if ! oc get imagestream ${APP_NAME} > /dev/null 2>&1; then
+                                echo "Creating ImageStream ${APP_NAME}..."
+                                oc create imagestream ${APP_NAME}
+                                echo "✅ ImageStream created"
+                            else
+                                echo "✅ ImageStream already exists"
+                            fi
+                        '''
+                        
+                        // Ensure BuildConfig exists with correct configuration
+                        sh '''
+                            echo "🔧 Ensuring BuildConfig exists and is properly configured..."
+                            if ! oc get buildconfig ${APP_NAME} > /dev/null 2>&1; then
+                                echo "Creating BuildConfig ${APP_NAME}..."
+                                oc new-build --name=${APP_NAME} --binary --strategy=docker --to=${APP_NAME}:latest
+                                echo "✅ BuildConfig created"
+                            else
+                                echo "✅ BuildConfig already exists"
+                                # Verify BuildConfig output reference
+                                OUTPUT_REF=$(oc get bc ${APP_NAME} -o jsonpath='{.spec.output.to.name}')
+                                echo "Current output reference: $OUTPUT_REF"
+                                
+                                # Fix output reference if needed
+                                if [ "$OUTPUT_REF" != "${APP_NAME}:latest" ]; then
+                                    echo "Fixing BuildConfig output reference..."
+                                    oc patch bc ${APP_NAME} -p '{"spec":{"output":{"to":{"kind":"ImageStreamTag","name":"'${APP_NAME}':latest"}}}}'
+                                fi
+                            fi
+                        '''
+                        
                         // Start build from current directory
                         sh '''
-                            echo "Starting OpenShift build..."
+                            echo "🏗️ Starting OpenShift build..."
                             oc start-build ${APP_NAME} --from-dir=. --follow --wait
+                            
+                            # Verify the build succeeded
+                            BUILD_STATUS=$(oc get builds -l buildconfig=${APP_NAME} --sort-by='.metadata.creationTimestamp' -o jsonpath='{.items[-1].status.phase}')
+                            echo "Build status: $BUILD_STATUS"
+                            
+                            if [ "$BUILD_STATUS" != "Complete" ]; then
+                                echo "❌ Build failed with status: $BUILD_STATUS"
+                                oc logs -f bc/${APP_NAME}
+                                exit 1
+                            fi
                             
                             # Tag the image with build version
                             oc tag ${APP_NAME}:latest ${APP_NAME}:${BUILD_VERSION}

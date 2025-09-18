@@ -441,7 +441,7 @@ except Exception as e:
                             echo "Testing API functionality..."
                             curl -f -s -X POST ${APP_URL}/predict \\
                                 -H "Content-Type: application/json" \\
-                                -d '{"features": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]}' || (echo "❌ API test failed" && exit 1)
+                                -d '{"features": [4.526, 28.0, 5.118, 1.073, 558.0, 2.547, 33.49, -117.16]}' || (echo "❌ API test failed" && exit 1)
                             echo "✅ API functionality test passed"
                             
                             echo "🎉 All post-deployment tests passed!"

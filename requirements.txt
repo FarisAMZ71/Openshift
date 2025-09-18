@@ -23,7 +23,6 @@ Markdown
 markdown-it-py
 MarkupSafe
 mdurl
-ml_dtypes
 namex
 numpy
 opt_einsum

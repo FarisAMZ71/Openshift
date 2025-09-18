@@ -72,7 +72,30 @@ pipeline {
                     pip install --timeout=600 --retries=3 --no-cache-dir \
                         --index-url https://pypi.org/simple/ \
                         --trusted-host pypi.org \
-                        -r requirements.txt
+                        wheel setuptools
+                    
+                    echo "📦 Installing lightweight packages first..."
+                    pip install --timeout=300 --retries=3 --no-cache-dir \
+                        flask flask-cors python-dotenv pytest pytest-cov 
+                    
+                    echo "📦 Installing ML packages (this may take a while)..."
+                    # Install heavy packages one by one with longer timeouts
+                    pip install --timeout=900 --retries=2 --no-cache-dir numpy
+                    pip install --timeout=900 --retries=2 --no-cache-dir pandas
+                    pip install --timeout=900 --retries=2 --no-cache-dir scikit-learn
+                    
+                    echo "📦 Installing XGBoost (large download)..."
+                    pip install --timeout=1200 --retries=2 --no-cache-dir xgboost
+                    
+                    echo "📦 Installing remaining packages..."
+                    pip install --timeout=300 --retries=3 --no-cache-dir \
+                        joblib matplotlib seaborn requests gunicorn
+                    
+                    echo "✅ All dependencies installed successfully"
+                    python --version
+                    pip list | head -20
+                    echo "📊 Key packages verification:"
+                    pip list | grep -E "(pytest|flask|scikit-learn|xgboost|pandas|numpy)" || echo "Some packages may not be installed"
                 '''
             }
         }

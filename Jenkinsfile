@@ -298,8 +298,16 @@ pipeline {
                             sh '''
                                 echo "Applying OpenShift configurations..."
                                 
-                                # Apply all configurations
-                                oc apply -f openshift/ -n ${OPENSHIFT_PROJECT}
+                                # Only apply essential configurations that might change
+                                # Skip BuildConfig, PVC, and other one-time resources
+                                echo "Applying ConfigMap (may contain updated config)..."
+                                oc apply -f openshift/configmap.yaml -n ${OPENSHIFT_PROJECT}
+                                
+                                echo "Applying Deployment configuration..."
+                                oc apply -f openshift/deployment.yaml -n ${OPENSHIFT_PROJECT}
+                                
+                                echo "Applying HPA configuration..."
+                                oc apply -f openshift/hpa.yaml -n ${OPENSHIFT_PROJECT}
                                 
                                 # Update deployment with new image
                                 oc set image deployment/${APP_NAME} api=image-registry.openshift-image-registry.svc:5000/${OPENSHIFT_PROJECT}/${APP_NAME}:${BUILD_VERSION} -n ${OPENSHIFT_PROJECT}

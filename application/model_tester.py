@@ -307,7 +307,37 @@ def test_edge_cases(model, scaler, feature_names):
     pred_random = model.predict(random_scaled)[0] * 100000
     print(f"   Random input: ${pred_random:.2f}")
 
-def visualize_results(y_test, y_pred, residuals, save_plots=False):
+def analyze_prediction_distribution(y_pred, y_test):
+    """Analyze the distribution of predictions to detect quantization issues"""
+    print("\n🔍 Analyzing prediction distribution...")
+    
+    # Check for duplicate predictions
+    unique_preds = len(np.unique(y_pred))
+    total_preds = len(y_pred)
+    
+    print(f"   Unique predictions: {unique_preds} out of {total_preds}")
+    print(f"   Prediction diversity: {unique_preds/total_preds:.3f}")
+    
+    if unique_preds/total_preds < 0.8:
+        print("   ⚠️  Low prediction diversity detected - model may be quantizing outputs")
+    
+    # Check prediction resolution
+    pred_diffs = np.diff(np.sort(y_pred))
+    min_diff = np.min(pred_diffs[pred_diffs > 0]) if len(pred_diffs[pred_diffs > 0]) > 0 else 0
+    
+    print(f"   Minimum prediction difference: ${min_diff * 100000:.2f}")
+    
+    # Check for clustering
+    from collections import Counter
+    pred_counts = Counter(np.round(y_pred, 4))
+    most_common = pred_counts.most_common(5)
+    
+    print("   Most frequent prediction values:")
+    for pred_val, count in most_common:
+        if count > 1:
+            print(f"     ${pred_val * 100000:.2f}: {count} times")
+
+def visualize_results(y_test, y_pred, residuals, save_plots=True):
     """Create visualization plots for model evaluation"""
     print("\n📊 Creating visualization plots...")
     
@@ -369,6 +399,9 @@ def run_comprehensive_tests():
     
     # 1. Basic performance metrics
     perf_metrics = test_model_performance(model, X_test, y_test, scaler, feature_names)
+
+    # Analyze prediction distribution
+    analyze_prediction_distribution(perf_metrics['predictions'], y_test)
     
     # 2. Performance across price ranges
     test_prediction_ranges(model, X_test, y_test, scaler)

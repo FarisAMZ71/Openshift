@@ -9,6 +9,7 @@ import json
 import pickle
 import numpy as np
 from datetime import datetime
+import pandas as pd
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -18,10 +19,13 @@ import xgboost as xgb
 def download_and_prepare_data():
     """Download California housing dataset and prepare for training"""
     print("📥 Downloading California housing dataset...")
-    housing = fetch_california_housing()
-    
-    X = housing.data
-    y = housing.target
+    housing = fetch_california_housing(as_frame=True)
+    df = housing.frame
+    # MedHouseVal is in units of $100,000, so filter for values less than 4.9
+    df = df[df['MedHouseVal'] < 5.0 ]  # Remove outliers above $500,000
+
+    X = df.drop(columns='MedHouseVal') 
+    y = df['MedHouseVal']
     
     # Split the data
     X_train, X_test, y_train, y_test = train_test_split(
@@ -41,19 +45,20 @@ def download_and_prepare_data():
 def create_xgb_model():
     """Create an XGBoost Regressor model with optimized hyperparameters"""
     model = xgb.XGBRegressor(
-        n_estimators=1000,
-        max_depth=6,
-        learning_rate=0.1,
-        subsample=0.8,
-        colsample_bytree=0.8,
+        n_estimators=2000,  # Increased from 1000
+        max_depth=8,        # Increased from 6
+        learning_rate=0.05, # Decreased from 0.1 for more gradual learning
+        subsample=0.9,      # Increased from 0.8
+        colsample_bytree=0.9, # Increased from 0.8
+        min_child_weight=3,   # Add this parameter
+        gamma=0.1,           # Add this parameter for regularization
         random_state=42,
         n_jobs=-1,
-        reg_alpha=0.1,
-        reg_lambda=1.0,
-        early_stopping_rounds=50,
+        reg_alpha=0.01,      # Reduced from 0.1
+        reg_lambda=0.1,      # Reduced from 1.0
+        early_stopping_rounds=100, # Increased from 50
         eval_metric='mae'
     )
-    
     return model
 
 def train_model(model, X_train, y_train, X_test, y_test):
